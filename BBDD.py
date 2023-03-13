@@ -11,8 +11,8 @@ class Basededatos:
         # creamos instancia q mediante dataset la conectamos con nuestro fichero de la base de datos
         self.videos = self.db['videos']
 
-    def insertar_video(self,file):
-        return self.videos.insert(file)
+    def insertar_video(self,dict_file):
+        return self.videos.insert(dict_file)
 
     def mostrar_video(self):
         return [dict(videos) for videos in self.videos.all()]
