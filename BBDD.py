@@ -20,3 +20,6 @@ class Basededatos:
     def eliminar_video(self):
         self.videos.delete()
         return
+    def eliminar(self,video_borrado):
+        self.videos.delete(video=video_borrado)
+        return

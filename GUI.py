@@ -2,7 +2,9 @@ import sys
 from PyQt5 import uic
 from PyQt5.QtWidgets import QMainWindow, QApplication, QTableWidget, QTableWidgetItem,QHeaderView
 from PyQt5.QtGui import QIcon, QPixmap
-from PyQt5.QtCore import QThread , pyqtSignal, QDateTime , QObject
+from PyQt5.QtCore import QThread , pyqtSignal, QDateTime , QObject, QUrl
+import PyQt5.QtMultimedia as multimedia
+import vlc
 import requests
 import json
 from time import sleep
@@ -10,6 +12,10 @@ from datetime import datetime
 import subprocess
 from threading import Thread
 import pandas as pd
+from os import remove
+from BBDD import Basededatos
+import asyncio
+
  
 ## CLASE PARA ACCION DEL THREAD ##
 class BackendThread(QObject):
@@ -57,6 +63,9 @@ class gui_video(QMainWindow):
         super().__init__()
         uic.loadUi("gui_video.ui",self)
         
+        ## IMPORTAR BASE DE DATOS ##
+        self.basedatos = Basededatos()
+
         ## NOMBRE VENTANA ##
         self.setWindowTitle('Servidor Camara Seguridad')
         
@@ -66,7 +75,7 @@ class gui_video(QMainWindow):
         self.logo.setPixmap(pixmap1)
 
         ## LOGO ##
-        pixmap2 = QPixmap('img_fondo.jpg')
+        pixmap2 = QPixmap('fondo.jpg')
         self.fondo.setPixmap(pixmap2)
 
         ## THREAD ## 
@@ -81,14 +90,21 @@ class gui_video(QMainWindow):
         self.list_categorias = ['Vacio']    
         self.list_categorias.sort()
         self.cbox_listado.addItems(self.list_categorias)
-        #self.cbox_listado.activated.connect(self.seleccion_categoria)
+        self.cbox_listado.activated.connect(self.seleccion_categoria)
+
+        ## REPRODUCTOR VIDEO ##
+        self.instance = vlc.Instance()
+        self.mediaplayer = self.instance.media_player_new()
+
+        ## BOTON BORRAR ##
+        self.boton_borrar.clicked.connect(self.borrar_video)
 
         ## VARIABLES AUXILIARES ##
         self.list_categorias = []
         self.listado_datos = []
         self.categoria_seleccionada = str
         self.envio_datos = {}
-    
+        
     ## FECHA ACTUAL ##
     def fecha_actual(self):
         ahora = datetime.now()
@@ -96,8 +112,15 @@ class gui_video(QMainWindow):
         fecha_hora_actual = ahora.strftime(formato)
         return fecha_hora_actual
 
-    #def seleccion_categoria(self,listado_datos):
-        
+    def borrar_video(self):
+        video_borrado = self.categoria_seleccionada
+        self.mediaplayer.stop()
+        remove(video_borrado)
+        self.basedatos.eliminar(video_borrado)
+
+    def seleccion_categoria(self,listado_datos):
+        self.categoria_seleccionada = self.cbox_listado.currentText()
+        self.reproducir(self.categoria_seleccionada)
         
     ## VISUALIZAR DE BdD A GUI ##
     def visualizar(self,list_all_datos,server):
@@ -111,6 +134,14 @@ class gui_video(QMainWindow):
         print(f'Listado de datos {self.listado_datos}')
         self.listado_datos.sort()
         self.cbox_listado.addItems(self.listado_datos)
+
+    def reproducir(self,categoria_seleccionada):
+        video = f'./{categoria_seleccionada}'
+        self.media = self.instance.media_new(video)
+        self.mediaplayer.set_media(self.media)
+        self.mediaplayer.set_hwnd(self.video_player.winId())
+        self.mediaplayer.play()
+
 
 
 
